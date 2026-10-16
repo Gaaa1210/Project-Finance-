@@ -1,0 +1,7 @@
+# Bibliotecas Python que o projeto usa.
+# Instale todas de uma vez com:  pip install -r requirements.txt
+
+pandas>=2.0      # tabelas de dados (como um Excel dentro do Python)
+openpyxl>=3.1    # permite ao pandas ler e escrever arquivos .xlsx
+yfinance>=0.2.40 # cotações e dividendos do Yahoo Finance (grátis, ~15 min de atraso)
+requests>=2.31   # acessar APIs na internet (Banco Central e CVM, nas etapas 2 e 3)

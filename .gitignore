@@ -1,0 +1,19 @@
+# Sua planilha com dados reais NÃO vai para o GitHub (privacidade).
+# Para criar a de exemplo: python criar_planilha_exemplo.py
+backend/data/*.xlsx
+
+# Arquivos temporários do Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Segredos (credenciais do Google, etc.) nunca vão para o GitHub
+.env
+secrets.toml
+*.json.key
+
+# React (Etapa 4)
+node_modules/
+dist/
+.DS_Store
