@@ -137,3 +137,32 @@ export function IconeConfirmada() {
     </svg>
   );
 }
+
+export function IconeEmpresas() {
+  return (
+    <svg {...base}>
+      <path d="M4 20.5V6.5l7-3v17" />
+      <path d="M11 9.5h9v11" />
+      <path d="M2.5 20.5h19" />
+      <path d="M7 9h1M7 12.5h1M7 16h1M14.5 13h1M14.5 16.5h1" />
+    </svg>
+  );
+}
+
+export function IconeAlerta() {
+  return (
+    <svg {...base} width={18} height={18} strokeWidth={2}>
+      <path d="M12 4 2.8 19.5h18.4L12 4Z" />
+      <path d="M12 10v4.5M12 17.2v.3" />
+    </svg>
+  );
+}
+
+export function IconeInfo() {
+  return (
+    <svg {...base} width={15} height={15} strokeWidth={2}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5.5M12 7.8v.2" />
+    </svg>
+  );
+}

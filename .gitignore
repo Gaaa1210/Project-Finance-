@@ -2,6 +2,11 @@
 # Para criar a de exemplo: python criar_planilha_exemplo.py
 backend/data/*.xlsx
 
+# Balanços da CVM: arquivos grandes, que qualquer um baixa de novo com
+# python3 atualizar_cvm.py (não precisam ir para o GitHub)
+backend/data/cvm/
+backend/data/*.sqlite
+
 # Arquivos temporários do Python
 __pycache__/
 *.pyc

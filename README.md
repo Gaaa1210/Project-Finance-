@@ -30,8 +30,13 @@ Project-Finance-/
 │   ├── etapa1.py                 ← roda a Etapa 1 no terminal
 │   ├── api.py                    ← servidor FastAPI que entrega os dados às telas
 │   ├── testar_noticias.py        ← testa as notícias no terminal
+│   ├── atualizar_cvm.py          ← baixa os balanços da CVM para o banco de dados
+│   ├── testar_cvm.py             ← mostra os números anuais de uma empresa
+│   ├── testar_analise.py         ← mostra Raio-X, alertas e valuation no terminal
 │   ├── data/
-│   │   └── carteira.xlsx         ← SUA planilha (abas: acoes, renda_fixa, fundos)
+│   │   ├── carteira.xlsx         ← SUA planilha (abas: acoes, renda_fixa, fundos)
+│   │   ├── cvm.sqlite            ← banco com os balanços da CVM (criado pelo atualizar_cvm.py)
+│   │   └── cvm/                  ← arquivos .zip baixados da CVM
 │   ├── carteira/                 ← o "motor" do app
 │   │   ├── planilha.py           ← lê e confere a planilha
 │   │   ├── cotacoes.py           ← busca preços e proventos no Yahoo Finance
@@ -42,6 +47,12 @@ Project-Finance-/
 │   │   ├── empresas.py           ← lista de empresas da aba Notícias (edite à vontade)
 │   │   ├── noticias.py           ← busca no Google Notícias e escolhe as mais em alta
 │   │   ├── credibilidade.py      ← veículos confiáveis + filtro de títulos sensacionalistas
+│   │   ├── cvm.py                ← baixa e guarda os balanços da CVM (SQLite)
+│   │   ├── demonstrativos.py     ← série anual + últimos 12 meses + quantidade de ações
+│   │   ├── mercado.py            ← taxa livre de risco (Banco Central) e beta (Yahoo)
+│   │   ├── indicadores.py        ← indicadores, semáforo, conclusões e sinais de alerta
+│   │   ├── valuation.py          ← fluxo de caixa descontado em 3 cenários (bancos: P/VP justo)
+│   │   ├── analise.py            ← junta tudo para a tela da empresa
 │   │   └── dados_exemplo.py      ← preços FICTÍCIOS para testar sem internet
 │   └── tests/
 │       └── test_etapa1.py        ← testes automáticos dos cálculos
@@ -54,7 +65,7 @@ Project-Finance-/
         ├── api.js                ← conversa com o servidor Python
         ├── estilos.css           ← visual (estilo iOS, modo claro e escuro)
         ├── componentes/          ← moldura do iPhone 17, abas, gráficos
-        └── telas/                ← Início, Ativos, Detalhe, Notícias, Desempenho, Adicionar
+        └── telas/                ← Início, Ativos, Detalhe, Empresas, Empresa (Análise/Valuation/Notícias)...
 ```
 
 Arquivos que ainda serão criados:
@@ -192,6 +203,60 @@ Limitações (honestas): o filtro **reduz** o risco de notícia falsa, mas nenhu
 garante que uma notícia é verdadeira. O feed do Google Notícias não é uma API oficial e pode
 mudar. Notícias internacionais aparecem em inglês, e Bloomberg/FT/WSJ costumam ter paywall.
 A BBC raramente cobre empresas brasileiras específicas.
+
+## Balanços da CVM (base do relatório de saúde e do valuation)
+
+Os números oficiais de todas as empresas da B3 vêm dos **dados abertos da CVM**
+(grátis, desde 2010). O app baixa os arquivos e guarda num banco **SQLite**
+(`backend/data/cvm.sqlite`), um banco de dados que mora num arquivo só e já vem com o Python.
+
+```bash
+python3 atualizar_cvm.py              # 1ª vez: alguns minutos (~150 MB). Depois é rápido.
+python3 testar_cvm.py PETR4           # receita, lucro, EBITDA, dívida, capex... ano a ano
+python3 testar_cvm.py WEGE3 --contas  # mostra também quais contas foram usadas
+```
+
+- Anuais (DFP) desde 2015 (`--desde 2010` para pegar tudo) e trimestrais (ITR) dos 2 últimos anos.
+- Rode de novo depois de cada temporada de balanços (março, maio, agosto e novembro).
+- Os números usam o **consolidado** (o grupo inteiro) e vêm em reais.
+- **Bancos e seguradoras** têm outro plano de contas: EBIT, dívida e capex não se aplicam.
+- **FIIs e ETFs** não aparecem (são fundos, não publicam balanço de empresa).
+- Depreciação, capex e dividendos não têm código fixo na CVM: o app procura pelo nome da
+  conta no fluxo de caixa. Use `--contas` para conferir o que foi encontrado.
+- Os arquivos baixados e o banco **não vão para o GitHub** (estão no `.gitignore`).
+
+## Análise e valuation das empresas (aba Empresas)
+
+Na aba **Empresas**, toque numa empresa (ou digite qualquer ticker) para abrir a página dela,
+com 3 seções. Dá para chegar também pela aba Ativos → ativo → "Análise e valuation da empresa".
+
+**Análise**
+- **Raio-X:** nota de 0 a 10 em Crescimento, Rentabilidade, Endividamento, Geração de caixa,
+  Dividendos e Preço, cada uma com uma frase de conclusão (escrita por regras, sem IA).
+- **Sinais de alerta:** patrimônio negativo, prejuízos recorrentes, receita ou margens caindo,
+  lucro que não vira caixa, dívida crescendo mais que o EBITDA, dividendos maiores que o caixa livre.
+- **Histórico em gráficos** (até 10 anos) e **todos os indicadores**, cada um com a regra do
+  semáforo e a explicação. As regras ficam em `carteira/indicadores.py` (lista `REGRAS`).
+
+**Valuation**
+- **Fluxo de caixa descontado** de 5 anos + perpetuidade, em 3 cenários (negativo, neutro,
+  positivo), com preço justo ponderado e margem de segurança.
+- **Premissas editáveis:** crescimento, margem, capex, depreciação, capital de giro, IR, WACC e
+  perpetuidade. As sugestões vêm do histórico da própria empresa (toque no ⓘ de cada uma).
+- **"O que o preço atual supõe?"** (valuation reverso), **conta ano a ano**, **tabela de
+  sensibilidade** e **custo de capital** com a fonte de cada número.
+- **Bancos e seguradoras** usam o modelo de P/VP justo (Gordon).
+
+Testar no terminal:
+
+```bash
+python3 testar_analise.py PETR4
+```
+
+Limitações (honestas): valuation é estimativa e depende muito das premissas; o valor de mercado
+usa o preço do ticker escolhido para todas as classes de ações (ON e PN); participação de
+minoritários não é descontada; as regras do semáforo são gerais (alguns setores têm padrões
+próprios). Não é recomendação de investimento.
 
 ### Colocando suas compras reais
 

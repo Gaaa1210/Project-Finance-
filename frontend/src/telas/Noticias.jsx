@@ -4,13 +4,13 @@ import { IconeBusca, IconeFechar, IconeSeta } from "../componentes/Icones.jsx";
 import { pareceTicker } from "../formatacao.js";
 
 /**
- * Aba Notícias: lista de empresas com uma barra de busca.
- * Tocar numa empresa abre as 20 notícias mais em alta dela.
+ * Aba Empresas: lista de empresas com uma barra de busca.
+ * Tocar numa empresa abre a página dela (análise, valuation e notícias).
  */
 export default function Noticias({ empresas, erro, aoTentarDeNovo, abrirEmpresa }) {
   const [busca, setBusca] = useState("");
 
-  const cabecalho = <Cabecalho titulo="Notícias" subtitulo="As mais em alta de cada empresa" />;
+  const cabecalho = <Cabecalho titulo="Empresas" subtitulo="Análise, valuation e notícias" />;
 
   if (erro && !empresas) {
     return (
@@ -66,7 +66,7 @@ export default function Noticias({ empresas, erro, aoTentarDeNovo, abrirEmpresa 
       {oferecerTicker && (
         <ul className="cartao lista">
           <LinhaEmpresa
-            empresa={{ ticker: tickerDigitado, nome: `Buscar notícias de ${tickerDigitado}`, setor: "Ticker fora da lista" }}
+            empresa={{ ticker: tickerDigitado, nome: `Abrir ${tickerDigitado}`, setor: "Ticker fora da lista" }}
             aoAbrir={abrirEmpresa}
           />
         </ul>
@@ -81,11 +81,11 @@ export default function Noticias({ empresas, erro, aoTentarDeNovo, abrirEmpresa 
 
       {carteira.length === 0 && outras.length === 0 && !oferecerTicker && (
         <p className="vazio centro">
-          Nenhuma empresa encontrada. Digite o ticker completo (ex.: VALE3) para buscar qualquer empresa da B3.
+          Nenhuma empresa encontrada. Digite o ticker completo (ex.: VALE3) para abrir qualquer empresa da B3.
         </p>
       )}
 
-      <p className="rodape">Notícias do Google Notícias. Os links abrem no site de cada jornal.</p>
+      <p className="rodape">Balanços da CVM · cotações do Yahoo Finance · notícias do Google Notícias.</p>
     </>
   );
 }
@@ -110,7 +110,7 @@ function LinhaEmpresa({ empresa, aoAbrir }) {
   const tipo = empresa.ticker.endsWith("11") && empresa.setor.startsWith("FII") ? "FII" : "Ação";
   return (
     <li>
-      <button type="button" className="linha-ativo" onClick={() => aoAbrir(empresa.ticker)}>
+      <button type="button" className="linha-ativo" onClick={() => aoAbrir(empresa)}>
         <SeloTicker ticker={empresa.ticker} tipo={tipo} />
         <span className="linha-ativo-meio">
           <strong>{empresa.nome}</strong>

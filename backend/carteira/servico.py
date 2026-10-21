@@ -289,3 +289,25 @@ def noticias_da_empresa(ticker: str, limite: int = 20) -> dict:
     ticker = ticker.strip().upper()
     encontrar_empresa(ticker)  # confere o formato antes de usar o cache
     return _noticias_cache(ticker, limite)
+
+
+# ---------------------------------------------------------------------------
+# Balanços da CVM (relatório de saúde da empresa)
+# ---------------------------------------------------------------------------
+
+def fundamentos_da_empresa(ticker: str) -> dict:
+    """Série anual dos balanços (CVM). Gera ErroDemonstrativos se não achar."""
+    from carteira.demonstrativos import serie_anual
+
+    serie = serie_anual(ticker)
+    tabela = serie["tabela"]
+    return {
+        "ticker": serie["ticker"],
+        "cnpj": serie["cnpj"],
+        "empresa": serie["empresa"],
+        "financeira": serie["financeira"],
+        "fonte": "CVM — Demonstrações Financeiras Padronizadas (DFP)",
+        "anos": [int(ano) for ano in tabela.index],
+        # Uma lista por número, na mesma ordem dos anos. Ex.: "receita_liquida": [..., ...]
+        "series": {coluna: [para_json(v) for v in tabela[coluna]] for coluna in tabela.columns},
+    }

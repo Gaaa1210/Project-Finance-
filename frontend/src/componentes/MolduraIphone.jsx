@@ -29,6 +29,7 @@ export default function MolduraIphone({ children }) {
         <span className="botao-lateral energia" />
 
         <div className="tela" style={{ width: LARGURA, height: ALTURA }}>
+          <div className="protecao-topo" aria-hidden="true" />
           <div className="barra-status" aria-hidden="true">
             <span className="hora">{hora}</span>
             <span className="icones-status">

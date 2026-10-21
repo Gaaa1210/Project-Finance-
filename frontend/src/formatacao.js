@@ -79,3 +79,38 @@ export function tempoAtras(iso, agora = new Date()) {
 export function pareceTicker(texto) {
   return /^[A-Z0-9]{4}\d{1,2}$/.test(texto.trim().toUpperCase());
 }
+
+// 12_345_000_000 -> "R$ 12,3 bi" | 450_200_000 -> "R$ 450,2 mi"
+export function reaisCompacto(valor) {
+  if (!valido(valor)) return "—";
+  const abs = Math.abs(valor);
+  const sinal = valor < 0 ? "−" : "";
+  const fmt = (v) => v.toLocaleString("pt-BR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+  if (abs >= 1e12) return `${sinal}R$ ${fmt(abs / 1e12)} tri`;
+  if (abs >= 1e9) return `${sinal}R$ ${fmt(abs / 1e9)} bi`;
+  if (abs >= 1e6) return `${sinal}R$ ${fmt(abs / 1e6)} mi`;
+  return sinal + reais(abs);
+}
+
+// 1.53 -> "1,5x"
+export function vezes(valor, casas = 1) {
+  if (!valido(valor)) return "—";
+  return valor.toFixed(casas).replace(".", ",").replace("-", "−") + "x";
+}
+
+// Formata um indicador conforme o "formato" que vem do Python.
+export function formatarIndicador(valor, formato) {
+  if (!valido(valor)) return "—";
+  switch (formato) {
+    case "pct":
+      return percentual(valor, false);
+    case "pp":
+      return `${(valor * 100).toFixed(1).replace(".", ",")} p.p.`;
+    case "x":
+      return vezes(valor);
+    case "reais":
+      return reaisCompacto(valor);
+    default:
+      return Math.round(valor).toLocaleString("pt-BR");
+  }
+}

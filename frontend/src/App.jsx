@@ -7,14 +7,14 @@ import Adicionar from "./telas/Adicionar.jsx";
 import Ativos from "./telas/Ativos.jsx";
 import Desempenho from "./telas/Desempenho.jsx";
 import Detalhe from "./telas/Detalhe.jsx";
+import Empresa from "./telas/Empresa.jsx";
 import Inicio from "./telas/Inicio.jsx";
 import Noticias from "./telas/Noticias.jsx";
-import NoticiasEmpresa from "./telas/NoticiasEmpresa.jsx";
 
 const NOMES_ABAS = {
   inicio: "Início",
   ativos: "Ativos",
-  noticias: "Notícias",
+  empresas: "Empresas",
   desempenho: "Desempenho",
   adicionar: "Adicionar",
 };
@@ -25,10 +25,10 @@ const NOMES_ABAS = {
  */
 export default function App() {
   const [aba, setAba] = useState("inicio");
-  // Tela "empurrada" por cima da aba (como no iPhone, com botão de voltar):
-  //   { tipo: "ativo", ticker: "PETR4" }    -> detalhe do ativo
-  //   { tipo: "noticias", ticker: "PETR4" } -> notícias da empresa
-  const [empurrada, setEmpurrada] = useState(null);
+  // Pilha de telas "empurradas" por cima da aba (como no iPhone, com botão de voltar).
+  // Ex.: [{ tipo: "ativo", ticker: "PETR4" }, { tipo: "empresa", ticker: "PETR4" }]
+  // A última da lista é a que aparece. "Voltar" tira a última.
+  const [pilha, setPilha] = useState([]);
   const [carteira, setCarteira] = useState(null);
   const [erro, setErro] = useState(null);
   const [atualizando, setAtualizando] = useState(false);
@@ -63,43 +63,52 @@ export default function App() {
     carregar();
   }, [carregar]);
 
-  // A lista de empresas só é buscada na primeira vez que a aba Notícias abre.
+  // A lista de empresas só é buscada na primeira vez que a aba Empresas abre.
   useEffect(() => {
-    if (aba === "noticias" && !empresas) carregarEmpresas();
+    if (aba === "empresas" && !empresas) carregarEmpresas();
   }, [aba, empresas, carregarEmpresas]);
 
   // Volta a rolagem para o topo sempre que trocar de tela.
   useEffect(() => {
     rolagem.current?.scrollTo({ top: 0 });
-  }, [aba, empurrada]);
+  }, [aba, pilha.length]);
 
   function trocarAba(nova) {
-    setEmpurrada(null);
+    setPilha([]);
     setAba(nova);
   }
 
+  const abrir = (tela) => setPilha((atual) => [...atual, tela]);
+  const voltar = () => setPilha((atual) => atual.slice(0, -1));
+  const abrirAtivo = (ticker) => abrir({ tipo: "ativo", ticker });
+  const abrirEmpresa = (empresa) => abrir({ tipo: "empresa", ticker: empresa.ticker, empresa });
+
+  // Nome que aparece no botão "voltar" (a tela de baixo na pilha, ou a aba).
+  function rotuloVoltar() {
+    const anterior = pilha[pilha.length - 2];
+    if (!anterior) return NOMES_ABAS[aba];
+    return anterior.ticker;
+  }
+
   function telaAtual() {
-    if (empurrada?.tipo === "ativo") {
+    const topo = pilha[pilha.length - 1];
+    if (topo?.tipo === "ativo") {
+      return <Detalhe ticker={topo.ticker} rotuloVoltar={rotuloVoltar()} aoVoltar={voltar} aoAbrirEmpresa={abrirEmpresa} />;
+    }
+    if (topo?.tipo === "empresa") {
+      const ehFii = topo.empresa?.setor?.startsWith("FII");
       return (
-        <Detalhe
-          ticker={empurrada.ticker}
-          rotuloVoltar={NOMES_ABAS[aba]}
-          aoVoltar={() => setEmpurrada(null)}
+        <Empresa
+          ticker={topo.ticker}
+          empresa={topo.empresa}
+          rotuloVoltar={rotuloVoltar()}
+          aoVoltar={voltar}
+          secaoInicial={ehFii ? "Notícias" : "Análise"}
         />
       );
     }
-    if (empurrada?.tipo === "noticias") {
-      return <NoticiasEmpresa ticker={empurrada.ticker} aoVoltar={() => setEmpurrada(null)} />;
-    }
-    if (aba === "noticias") {
-      return (
-        <Noticias
-          empresas={empresas}
-          erro={erroEmpresas}
-          aoTentarDeNovo={carregarEmpresas}
-          abrirEmpresa={(ticker) => setEmpurrada({ tipo: "noticias", ticker })}
-        />
-      );
+    if (aba === "empresas") {
+      return <Noticias empresas={empresas} erro={erroEmpresas} aoTentarDeNovo={carregarEmpresas} abrirEmpresa={abrirEmpresa} />;
     }
     if (aba === "adicionar") {
       return <Adicionar carteira={carteira} aoSalvar={carregar} />;
@@ -121,22 +130,19 @@ export default function App() {
       );
     }
 
-    const props = {
-      carteira,
-      abrirAtivo: (ticker) => setEmpurrada({ tipo: "ativo", ticker }),
-      irPara: trocarAba,
-    };
+    const props = { carteira, abrirAtivo, irPara: trocarAba };
     if (aba === "ativos") return <Ativos {...props} />;
     if (aba === "desempenho") return <Desempenho {...props} />;
     return <Inicio {...props} atualizando={atualizando} aoAtualizar={carregar} />;
   }
 
-  const chave = empurrada ? `${empurrada.tipo}-${empurrada.ticker}` : aba;
+  const topo = pilha[pilha.length - 1];
+  const chave = topo ? `${pilha.length}-${topo.tipo}-${topo.ticker}` : aba;
 
   return (
     <MolduraIphone>
       <main className="conteudo" ref={rolagem}>
-        <div className={"pagina" + (empurrada ? " empurrada" : "")} key={chave}>
+        <div className={"pagina" + (topo ? " empurrada" : "")} key={chave}>
           {telaAtual()}
         </div>
       </main>

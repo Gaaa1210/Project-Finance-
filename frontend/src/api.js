@@ -55,3 +55,15 @@ export function buscarEmpresas() {
 export function buscarNoticias(ticker) {
   return pedir(`/api/noticias/${encodeURIComponent(ticker)}`);
 }
+
+export function buscarAnalise(ticker) {
+  return pedir(`/api/analise/${encodeURIComponent(ticker)}`);
+}
+
+export function recalcularValuation(ticker, cenarios, pesos) {
+  return pedir(`/api/valuation/${encodeURIComponent(ticker)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cenarios, pesos }),
+  });
+}

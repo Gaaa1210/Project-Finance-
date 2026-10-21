@@ -16,7 +16,7 @@ const FILTROS = ["Todas", "Brasil", "Internacional"];
  * As 20 notícias mais em alta (e de fontes confiáveis) de uma empresa.
  * Cada uma abre no site do jornal.
  */
-export default function NoticiasEmpresa({ ticker, aoVoltar }) {
+export default function NoticiasEmpresa({ ticker, aoVoltar, embutido = false }) {
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState(null);
   const [filtro, setFiltro] = useState("Todas");
@@ -29,7 +29,8 @@ export default function NoticiasEmpresa({ ticker, aoVoltar }) {
 
   useEffect(carregar, [ticker]);
 
-  const voltar = (
+  // "embutido" = dentro da página da empresa (que já tem o título e o botão de voltar).
+  const voltar = embutido ? null : (
     <button type="button" className="botao-voltar" onClick={aoVoltar}>
       <IconeVoltar /> Notícias
     </button>
@@ -61,7 +62,7 @@ export default function NoticiasEmpresa({ ticker, aoVoltar }) {
   return (
     <>
       {voltar}
-      <header className="noticias-topo">
+      {!embutido && <header className="noticias-topo">
         <SeloTicker ticker={empresa.ticker} tipo={tipo} />
         <div>
           <h1>{empresa.nome}</h1>
@@ -69,7 +70,7 @@ export default function NoticiasEmpresa({ ticker, aoVoltar }) {
             {empresa.ticker} · {empresa.setor}
           </p>
         </div>
-      </header>
+      </header>}
 
       <p className="noticias-resumo">
         <IconeEmAlta /> {dados.noticias.length} em alta · últimos {dados.periodo_dias} dias

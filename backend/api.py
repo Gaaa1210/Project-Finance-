@@ -7,6 +7,9 @@ Ele fica rodando no seu Mac e responde aos pedidos das telas em React:
     POST /api/compras          -> grava uma compra nova na planilha
     GET  /api/empresas         -> empresas da aba Notícias
     GET  /api/noticias/PETR4   -> as 20 notícias mais em alta da empresa
+    GET  /api/fundamentos/PETR4 -> balanços anuais da CVM (receita, lucro, dívida...)
+    GET  /api/analise/PETR4    -> indicadores, semáforo, alertas e valuation com 3 cenários
+    POST /api/valuation/PETR4  -> recalcula o valuation com as premissas que você mudou
 
 Como rodar (dentro da pasta backend, com o .venv ativado):
     python3 api.py              -> preços reais do Yahoo Finance
@@ -24,7 +27,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from carteira import servico
+from carteira import analise, servico
+from carteira.demonstrativos import ErroDemonstrativos
 from carteira.noticias import ErroNoticias
 from carteira.planilha import ErroPlanilha
 
@@ -41,6 +45,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class PremissasValuation(BaseModel):
+    """Premissas editadas na tela de valuation (um dicionário por cenário)."""
+    cenarios: dict
+    pesos: Optional[dict] = None
 
 
 class NovaCompra(BaseModel):
@@ -111,6 +121,33 @@ def noticias(ticker: str, limite: int = 20):
     except ErroNoticias as erro:
         # 503 = "serviço indisponível no momento"
         raise HTTPException(status_code=503, detail=str(erro))
+
+
+@app.get("/api/fundamentos/{ticker}")
+def fundamentos(ticker: str):
+    # Precisa do banco da CVM: rode antes "python3 atualizar_cvm.py".
+    try:
+        return servico.fundamentos_da_empresa(ticker)
+    except ErroDemonstrativos as erro:
+        raise HTTPException(status_code=404, detail=str(erro))
+
+
+@app.get("/api/analise/{ticker}")
+def analise_empresa(ticker: str):
+    try:
+        return analise.montar_analise(ticker, offline=MODO_OFFLINE)
+    except ErroDemonstrativos as erro:
+        raise HTTPException(status_code=404, detail=str(erro))
+
+
+@app.post("/api/valuation/{ticker}")
+def recalcular_valuation(ticker: str, premissas: PremissasValuation):
+    try:
+        return analise.recalcular_valuation(ticker, premissas.cenarios, premissas.pesos, offline=MODO_OFFLINE)
+    except ErroDemonstrativos as erro:
+        raise HTTPException(status_code=404, detail=str(erro))
+    except ValueError as erro:
+        raise HTTPException(status_code=400, detail=str(erro))
 
 
 if __name__ == "__main__":

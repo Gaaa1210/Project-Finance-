@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { buscarAtivo } from "../api.js";
 import GraficoPreco from "../componentes/GraficoPreco.jsx";
 import { Avisos, Carregando, ErroTela, FaixaOffline, Rodape, Variacao } from "../componentes/Comuns.jsx";
-import { IconeVoltar } from "../componentes/Icones.jsx";
+import { IconeSeta, IconeVoltar } from "../componentes/Icones.jsx";
 import { corDoValor, dataBR, numero, percentual, reais, reaisComSinal } from "../formatacao.js";
 
 /** Tela 3 — Detalhe do ativo: gráfico com preço médio, compras e proventos. */
-export default function Detalhe({ ticker, aoVoltar, rotuloVoltar = "Ativos" }) {
+export default function Detalhe({ ticker, aoVoltar, rotuloVoltar = "Ativos", aoAbrirEmpresa }) {
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState(null);
 
@@ -60,6 +60,16 @@ export default function Detalhe({ ticker, aoVoltar, rotuloVoltar = "Ativos" }) {
         )}
       </header>
       <FaixaOffline ativo={dados.modo_offline} />
+
+      {aoAbrirEmpresa && a.tipo !== "FII" && a.tipo !== "ETF" && (
+        <button type="button" className="cartao botao-empresa" onClick={() => aoAbrirEmpresa({ ticker: a.ticker, setor: a.setor })}>
+          <span>
+            <strong>Análise e valuation da empresa</strong>
+            <small>Raio-X, sinais de alerta, preço justo em 3 cenários</small>
+          </span>
+          <IconeSeta />
+        </button>
+      )}
 
       <section className="cartao">
         <GraficoPreco pontos={dados.historico} precoMedio={a.preco_medio} compras={dados.compras} />

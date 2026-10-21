@@ -1,9 +1,9 @@
-import { IconeAdicionar, IconeAtivos, IconeDesempenho, IconeInicio, IconeNoticias } from "./Icones.jsx";
+import { IconeAdicionar, IconeAtivos, IconeDesempenho, IconeEmpresas, IconeInicio } from "./Icones.jsx";
 
 const ABAS = [
   { id: "inicio", nome: "Início", Icone: IconeInicio },
   { id: "ativos", nome: "Ativos", Icone: IconeAtivos },
-  { id: "noticias", nome: "Notícias", Icone: IconeNoticias },
+  { id: "empresas", nome: "Empresas", Icone: IconeEmpresas },
   { id: "desempenho", nome: "Desempenho", Icone: IconeDesempenho },
   { id: "adicionar", nome: "Adicionar", Icone: IconeAdicionar },
 ];
