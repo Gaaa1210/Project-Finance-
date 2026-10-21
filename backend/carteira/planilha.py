@@ -170,3 +170,73 @@ def _validar_linha_acao(linha) -> dict:
         "tipo": tipo,
         "setor": str(linha["setor"]).strip(),
     }
+
+
+# ---------------------------------------------------------------------------
+# Gravar uma compra nova (usado pela tela "Adicionar" do app)
+# ---------------------------------------------------------------------------
+
+def adicionar_compra_acao(dados: dict, caminho: Path = CAMINHO_PADRAO) -> dict:
+    """
+    Confere uma compra nova e escreve como uma linha nova no fim da aba "acoes".
+
+    'dados' é um dicionário com: ticker, quantidade, preco_pago, data_compra
+    e, opcionais, tipo, setor e taxas. A data pode vir como "2025-03-10"
+    (formato do formulário do app) ou "10/03/2025".
+
+    Devolve a compra já limpa. Gera ErroPlanilha com uma mensagem amigável
+    se algo estiver errado (nada é gravado nesse caso).
+    """
+    # Importamos aqui porque só esta função precisa do openpyxl diretamente.
+    from datetime import date
+    from openpyxl import load_workbook
+
+    data = dados.get("data_compra")
+    if isinstance(data, str) and len(data) == 10 and data[4] == "-":
+        data = date.fromisoformat(data)  # "2025-03-10" -> 10 de março de 2025
+
+    linha = {
+        "ticker": dados.get("ticker") or "",
+        "quantidade": dados.get("quantidade"),
+        "preco_pago": dados.get("preco_pago"),
+        "data_compra": data,
+        "taxas": dados.get("taxas") or 0.0,
+        "tipo": dados.get("tipo") or COLUNAS_ACOES_OPCIONAIS["tipo"],
+        "setor": dados.get("setor") or COLUNAS_ACOES_OPCIONAIS["setor"],
+    }
+
+    try:
+        compra = _validar_linha_acao(linha)  # mesma conferência da leitura
+    except (ValueError, TypeError) as erro:
+        raise ErroPlanilha(str(erro))
+
+    caminho = Path(caminho)
+    if not caminho.exists():
+        raise ErroPlanilha(
+            f"Não encontrei a planilha em '{caminho}'.\n"
+            "Rode 'python3 criar_planilha_exemplo.py' para criar uma de exemplo."
+        )
+
+    arquivo = load_workbook(caminho)
+    if "acoes" not in arquivo.sheetnames:
+        raise ErroPlanilha("A planilha não tem uma aba chamada 'acoes'.")
+    aba = arquivo["acoes"]
+
+    # Lê o cabeçalho (linha 1) para escrever cada valor na coluna certa,
+    # mesmo que você tenha mudado a ordem das colunas no Excel.
+    cabecalho = [str(c.value).strip().lower() if c.value else "" for c in aba[1]]
+    faltando = [c for c in COLUNAS_ACOES_OBRIGATORIAS if c not in cabecalho]
+    if faltando:
+        raise ErroPlanilha(
+            "A aba 'acoes' não tem estas colunas obrigatórias: " + ", ".join(faltando)
+        )
+
+    valores = {**compra, "data_compra": compra["data_compra"].to_pydatetime()}
+    aba.append([valores.get(coluna) for coluna in cabecalho])
+
+    # Formata a data nova no padrão brasileiro.
+    coluna_data = cabecalho.index("data_compra") + 1
+    aba.cell(row=aba.max_row, column=coluna_data).number_format = "DD/MM/YYYY"
+
+    arquivo.save(caminho)
+    return compra

@@ -28,6 +28,8 @@ Project-Finance-/
 │   ├── requirements.txt          ← lista de bibliotecas para instalar
 │   ├── criar_planilha_exemplo.py ← cria data/carteira.xlsx com dados de exemplo
 │   ├── etapa1.py                 ← roda a Etapa 1 no terminal
+│   ├── api.py                    ← servidor FastAPI que entrega os dados às telas
+│   ├── testar_noticias.py        ← testa as notícias no terminal
 │   ├── data/
 │   │   └── carteira.xlsx         ← SUA planilha (abas: acoes, renda_fixa, fundos)
 │   ├── carteira/                 ← o "motor" do app
@@ -36,17 +38,28 @@ Project-Finance-/
 │   │   ├── calculos_acoes.py     ← contas de ações/ETFs/FIIs (preço médio, lucro...)
 │   │   ├── acoes.py              ← junta planilha + cotações + contas
 │   │   ├── formatacao.py         ← mostra R$ 1.234,56 e +12,34%
+│   │   ├── servico.py            ← prepara os dados de cada tela (vira JSON)
+│   │   ├── empresas.py           ← lista de empresas da aba Notícias (edite à vontade)
+│   │   ├── noticias.py           ← busca no Google Notícias e escolhe as mais em alta
+│   │   ├── credibilidade.py      ← veículos confiáveis + filtro de títulos sensacionalistas
 │   │   └── dados_exemplo.py      ← preços FICTÍCIOS para testar sem internet
 │   └── tests/
 │       └── test_etapa1.py        ← testes automáticos dos cálculos
 │
-└── frontend/                     ← telas em React (Etapa 4)
+└── frontend/                     ← telas em React (Vite)
+    ├── package.json              ← lista de bibliotecas do React
+    ├── vite.config.js            ← liga o React ao servidor Python (/api)
+    └── src/
+        ├── App.jsx               ← escolhe qual tela mostrar
+        ├── api.js                ← conversa com o servidor Python
+        ├── estilos.css           ← visual (estilo iOS, modo claro e escuro)
+        ├── componentes/          ← moldura do iPhone 17, abas, gráficos
+        └── telas/                ← Início, Ativos, Detalhe, Notícias, Desempenho, Adicionar
 ```
 
 Arquivos que ainda serão criados:
 - Etapa 2: `carteira/indices_bcb.py` (CDI, Selic, IPCA) e `carteira/calculos_renda_fixa.py`
 - Etapa 3: `carteira/fundos.py` (cotas da CVM)
-- Etapa 4: `backend/api.py` (servidor FastAPI) e a pasta `frontend/` (React)
 - Etapa 5: conexão com Google Sheets, publicação e configuração no iPhone
 
 ## Etapas
@@ -56,38 +69,129 @@ Arquivos que ainda serão criados:
 | 1 | Planilha + ações, ETFs e FIIs | ✅ pronta |
 | 2 | Renda fixa (CDB, LCI, LCA, Tesouro) | ⏳ |
 | 3 | Fundos de investimento | ⏳ |
-| 4 | Servidor Python + telas em React | ⏳ |
+| 4 | Servidor Python + telas em React | 🟡 telas prontas (ações, ETFs e FIIs) |
 | 5 | Google Sheets, publicação e iPhone | ⏳ |
 
 ## Etapa 1 — como instalar e rodar
 
 Precisa do **Python 3.11 ou mais novo** ([python.org](https://www.python.org/downloads/)).
 
+No Mac, use sempre **`python3`** (o comando `python` não existe no Mac e dá
+`command not found`).
+
 ```bash
-# 1. Baixe o projeto e entre na pasta do backend
-git clone https://github.com/Gaaa1210/Project-Finance-.git
-cd Project-Finance-/backend
+# 1. Entre na pasta do backend.
+#    ATENÇÃO: o caminho tem espaço ("Project Finance"), então use ASPAS.
+cd "$HOME/Documents/Project Finance/Project-Finance-/backend"
 
 # 2. Crie um "ambiente virtual" (uma caixinha só deste projeto para as bibliotecas)
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# Mac/Linux:
+python3 -m venv .venv
+
+# 3. Ative o ambiente (o começo da linha do terminal passa a mostrar "(.venv)")
 source .venv/bin/activate
 
-# 3. Instale as bibliotecas
-pip install -r requirements.txt
+# 4. Instale as bibliotecas
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
 
-# 4. Crie a planilha de exemplo
-python criar_planilha_exemplo.py
+# 5. Crie a planilha de exemplo
+python3 criar_planilha_exemplo.py
 
-# 5. Rode!
-python etapa1.py --offline   # preços fictícios, para testar sem internet
-python etapa1.py             # preços reais do Yahoo Finance
+# 6. Rode!
+python3 etapa1.py --offline   # preços fictícios, para testar sem internet
+python3 etapa1.py             # preços reais do Yahoo Finance
 
-# 6. Rode os testes automáticos
-python -m unittest discover tests -v
+# 7. Rode os testes automáticos
+python3 -m unittest discover tests -v
 ```
+
+Toda vez que abrir um terminal novo, repita os passos 1 e 3 (entrar na pasta e ativar
+o `.venv`) antes de rodar o projeto.
+
+### Problemas comuns no Mac
+
+| Mensagem | O que fazer |
+|----------|-------------|
+| `zsh: command not found: python` | Use `python3` no lugar de `python`. |
+| `cd: no such file or directory` | Faltaram as aspas no caminho com espaço. |
+| Abre uma janela pedindo "ferramentas de linha de comando" | Clique em **Instalar**, espere terminar e rode o comando de novo. |
+| `command not found: python3` | Instale o Python em [python.org](https://www.python.org/downloads/). |
+| `ModuleNotFoundError: No module named 'pandas'` | O `.venv` não está ativado: rode `source .venv/bin/activate`. |
+| `externally-managed-environment` | Mesmo caso: ative o `.venv` antes do `pip install`. |
+
+## Etapa 4 — as telas (React) no navegador
+
+São **dois programas** rodando ao mesmo tempo, cada um no seu Terminal:
+o servidor Python (os cálculos) e o React (as telas).
+
+Precisa do **Node.js** (para o React). Confira com `node --version`.
+Se aparecer `command not found`, instale a versão LTS em [nodejs.org](https://nodejs.org/).
+
+**Terminal 1 — servidor Python:**
+
+```bash
+cd "$HOME/Documents/Project Finance/Project-Finance-/backend"
+source .venv/bin/activate
+python3 -m pip install -r requirements.txt   # só na 1ª vez (instala FastAPI e Uvicorn)
+python3 api.py --offline                     # ou: python3 api.py  (preços reais)
+```
+
+Deixe esse Terminal aberto. Teste em http://localhost:8000/api/saude
+(deve aparecer `{"ok":true,...}`). A página http://localhost:8000/docs mostra a API.
+
+**Terminal 2 — telas em React** (abra outra janela com ⌘ + N):
+
+```bash
+cd "$HOME/Documents/Project Finance/Project-Finance-/frontend"
+npm install      # só na 1ª vez (baixa o React)
+npm run dev
+```
+
+Abra **http://localhost:5173** no navegador. No computador o app aparece dentro de
+um iPhone 17. Para desligar qualquer um dos dois: `Ctrl + C` no Terminal dele.
+
+**Ver no iPhone de verdade (mesmo Wi-Fi):** o Terminal 2 mostra uma linha
+`Network: http://192.168.x.x:5173`. Abra esse endereço no Safari do iPhone →
+Compartilhar → **Adicionar à Tela de Início**. Funciona enquanto o Mac estiver ligado
+com os dois Terminais rodando (publicar na internet é a Etapa 5).
+
+O que já funciona: Início, Ativos, Detalhe (gráfico com preço médio, compras e
+proventos), Desempenho (retorno por ativo) e Adicionar (grava a compra no `carteira.xlsx`).
+Renda fixa, fundos e a comparação com CDI/Ibovespa/IPCA entram nas Etapas 2 e 3.
+
+> Dica: feche o `carteira.xlsx` no Excel antes de adicionar compras pelo app.
+> Se o Excel salvar uma versão antiga por cima, a compra nova some.
+
+## Aba Notícias
+
+Mostra as empresas da sua carteira e uma lista de empresas da B3, com uma barra de busca.
+Tocando numa empresa, o app traz as **20 notícias mais em alta** dela, só de fontes confiáveis.
+
+- **De onde vêm:** Google Notícias (feed RSS, grátis), últimos 7 dias, em duas buscas:
+  - **Brasil** (em português): Valor, Estadão, Folha, O Globo, g1, InfoMoney, Exame, Brazil Journal...
+  - **Internacional** (em inglês): Reuters, Bloomberg, Financial Times, WSJ, CNBC, BBC...
+    Só para empresas com `busca_en` em `carteira/empresas.py` (as grandes).
+  Se houver menos de 20 histórias, o app amplia para 30 dias.
+- **Filtro de credibilidade** (`carteira/credibilidade.py`):
+  1. só entram veículos da lista de confiáveis (fonte desconhecida fica escondida);
+  2. títulos sensacionalistas ("URGENTE!!", "você não vai acreditar", tudo em MAIÚSCULAS) saem;
+  3. história publicada por 2+ veículos confiáveis ganha o selo **Confirmada**.
+  O app mostra quantas notícias foram escondidas e por quê.
+- **O que é "em alta":** repercussão (quantos veículos), novidade, ordem do Google e
+  nível do veículo (referência pesa mais que "conhecido").
+- **Empresa fora da lista:** digite o ticker completo (ex.: `ABCD3`) na busca.
+- As notícias são sempre **reais**, mesmo com `--offline`, então essa aba precisa de internet.
+
+Testar no terminal, sem abrir o app:
+
+```bash
+python3 testar_noticias.py PETR4
+```
+
+Limitações (honestas): o filtro **reduz** o risco de notícia falsa, mas nenhum programa
+garante que uma notícia é verdadeira. O feed do Google Notícias não é uma API oficial e pode
+mudar. Notícias internacionais aparecem em inglês, e Bloomberg/FT/WSJ costumam ter paywall.
+A BBC raramente cobre empresas brasileiras específicas.
 
 ### Colocando suas compras reais
 

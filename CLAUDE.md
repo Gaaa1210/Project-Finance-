@@ -83,15 +83,32 @@ Sheets (gspread). Segredos (credenciais do Google) **nunca** no código nem no G
 | 1 | Planilha de exemplo + leitura + cálculos de ações, ETFs e FIIs | ✅ pronta (no GitHub) |
 | 2 | Calculadora de renda fixa (CDB, LCI, LCA, Tesouro) | ⏳ próxima |
 | 3 | Fundos de investimento (CVM) | ⏳ |
-| 4 | Servidor FastAPI + telas em React (as 5 telas) | ⏳ |
+| 4 | Servidor FastAPI + telas em React (as 5 telas) | 🟡 feita para ações/ETFs/FIIs |
 | 5 | Google Sheets, publicação gratuita do backend e do frontend, configuração no iPhone | ⏳ |
 
 ### Pendência atual
-O usuário ainda **não conseguiu rodar a Etapa 1 no Mac**: travou ao criar o ambiente virtual.
-Primeiro passo da próxima conversa: ajudá-lo a criar o `.venv` dentro de `backend/`, instalar
-`requirements.txt`, rodar `python3 criar_planilha_exemplo.py`, `python3 etapa1.py --offline` e
-`python3 etapa1.py` (preços reais). **A busca real no Yahoo Finance ainda nunca foi testada**
-(o ambiente onde a Etapa 1 foi escrita não tinha acesso à internet); verificar se funciona.
+- Etapa 1 **roda no Mac** (venv criado com `python3 -m venv .venv`).
+- A Etapa 4 foi adiantada a pedido do usuário: `backend/api.py` (FastAPI) + `frontend/` (React com
+  Vite, moldura de iPhone 17 no computador e tela cheia no celular). Testada com esbuild e Chromium
+  no modo offline, mas **ainda não rodada no Mac** (`npm install` / `npm run dev` / `python3 api.py`).
+  Verificar se ele tem Node.js. A busca real no Yahoo e o `pip install fastapi` também não foram
+  testados no ambiente do Claude (sem acesso ao PyPI/Yahoo).
+- Tela Desempenho: comparação com CDI/Ibovespa/IPCA está como "em breve" (depende da Etapa 2).
+- Usuário rodou as telas no Mac e aprovou o visual (fez `npm install`).
+- **Aba Notícias** feita (pedido do usuário): lista de empresas (carteira + `carteira/empresas.py`) com
+  busca; ao tocar, as 20 notícias "em alta" via Google News RSS (`carteira/noticias.py`: agrupa
+  títulos parecidos por Jaccard, nota = repercussão × novidade × posição no Google; 7 dias, amplia
+  para 30). Depois ganhou **filtro de credibilidade** (`carteira/credibilidade.py`: lista de
+  veículos nível 1/2 por domínio do `<source url>`, descarta desconhecidos e títulos
+  sensacionalistas; selo "Confirmada" com 2+ veículos) e **busca internacional em inglês**
+  (hl=en-US; campo `busca_en` em empresas.py; filtro Todas/Brasil/Internacional na tela).
+  Combinado com o usuário: não existe detector de fake news confiável; é filtro de credibilidade.
+  **Não testada contra o Google News real** (bloqueado no ambiente do Claude); pedir para
+  ele rodar `python3 testar_noticias.py PETR4` e colar a saída se der erro.
+- Plano combinado com o usuário (por partes): 1) Notícias ✅  2) Relatório de saúde da empresa
+  (balanços da CVM — DFP/ITR — guardados em SQLite + yfinance para múltiplos; semáforo por critério;
+  bancos têm plano de contas diferente; precisa mapear ticker → CNPJ)  3) Melhorar o design
+  (pedir prints de apps de referência). Renda fixa e fundos ficam para depois disso.
 
 ## Estrutura atual do código
 
@@ -100,6 +117,8 @@ backend/
 ├── requirements.txt          pandas, openpyxl, yfinance, requests
 ├── criar_planilha_exemplo.py cria data/carteira.xlsx (abas: acoes, renda_fixa, fundos)
 ├── etapa1.py                 roda a Etapa 1 no terminal (--offline usa preços fictícios)
+├── api.py                    FastAPI: /api/carteira, /api/ativos/{t}, POST /api/compras, /api/empresas, /api/noticias/{t}
+├── testar_noticias.py        imprime as notícias no terminal
 ├── data/carteira.xlsx        planilha do usuário (fora do Git, ver .gitignore)
 ├── carteira/
 │   ├── planilha.py           lê e valida a planilha; ErroPlanilha com mensagens amigáveis
@@ -107,8 +126,15 @@ backend/
 │   ├── calculos_acoes.py     funções puras: preço médio, lucro, variação, proventos, retorno
 │   ├── acoes.py              resumir_acoes() e totalizar_acoes(): junta tudo
 │   ├── formatacao.py         R$ 1.234,56 e +12,34%
+│   ├── servico.py            monta o JSON das telas; cache de cotações 5 min, notícias 15 min
+│   ├── empresas.py           lista curada de empresas da B3 + termos de busca de notícias
+│   ├── noticias.py           Google News RSS (pt + en): ler, filtrar, agrupar, pontuar "em alta"
+│   ├── credibilidade.py      veículos confiáveis (nível 1/2) + detector de título sensacionalista
 │   └── dados_exemplo.py      cotações FICTÍCIAS para o modo offline
-└── tests/test_etapa1.py      16 testes (python3 -m unittest discover tests -v)
+└── tests/                    50 testes (python3 -m unittest discover tests -v)
+
+frontend/                     React + Vite (npm run dev → localhost:5173, proxy /api → :8000)
+└── src/  App.jsx, api.js, formatacao.js, estilos.css, componentes/, telas/
 ```
 
 A aba `renda_fixa` da planilha de exemplo já está preenchida no formato da Etapa 2

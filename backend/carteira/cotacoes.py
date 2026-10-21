@@ -109,3 +109,33 @@ def _limpar_datas(serie: pd.Series) -> pd.Series:
         serie.index = serie.index.tz_localize(None)
     serie.index = pd.to_datetime(serie.index).normalize()
     return serie.astype(float)
+
+
+def buscar_historico(ticker: str, inicio) -> pd.Series:
+    """
+    Preços de fechamento diários desde a data 'inicio' (usado no gráfico do app).
+    Devolve uma série do pandas: índice = data, valor = preço de fechamento.
+    Gera ErroCotacao se não houver internet ou se o ativo não existir.
+    """
+    try:
+        import yfinance as yf
+    except ImportError:
+        raise ErroCotacao(
+            "A biblioteca yfinance não está instalada. "
+            "Rode: pip install -r requirements.txt"
+        )
+
+    try:
+        historico = yf.Ticker(normalizar_ticker(ticker)).history(
+            start=pd.Timestamp(inicio).strftime("%Y-%m-%d"), auto_adjust=False
+        )
+    except Exception as erro:
+        raise ErroCotacao(
+            f"{ticker}: não consegui baixar o histórico de preços. "
+            f"Verifique sua internet. (detalhe técnico: {type(erro).__name__})"
+        )
+
+    if historico is None or historico.empty:
+        raise ErroCotacao(f"{ticker}: o Yahoo Finance não tem histórico de preços desse ativo.")
+
+    return _limpar_datas(historico["Close"].dropna())
